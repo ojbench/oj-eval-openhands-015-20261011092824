@@ -4,106 +4,123 @@
 #include <vector>
 #include <algorithm>
 #include <sstream>
-#include <cstring>
-#include <set>
 
 using namespace std;
 
 class FileStorage {
 private:
     string dataFile = "database.dat";
-    static const int MAX_INDEX_LEN = 64;
-    
-    struct Record {
-        char index[MAX_INDEX_LEN + 1];
-        int value;
-        bool deleted;
-        
-        Record() : value(0), deleted(false) {
-            index[0] = '\0';
-        }
-    };
     
 public:
     FileStorage() {
         // Check if file exists, create if not
-        ifstream check(dataFile, ios::binary);
+        ifstream check(dataFile);
         if (!check.good()) {
-            ofstream create(dataFile, ios::binary);
+            ofstream create(dataFile);
             create.close();
         }
         check.close();
     }
     
     void insert(const string& index, int value) {
-        // Check if (index, value) already exists
+        // Check if (index, value) already exists by scanning file
         if (exists(index, value)) {
             return;
         }
         
-        ofstream file(dataFile, ios::binary | ios::app);
+        // Append new record
+        ofstream file(dataFile, ios::app);
         if (file.is_open()) {
-            Record record;
-            strncpy(record.index, index.c_str(), MAX_INDEX_LEN);
-            record.index[MAX_INDEX_LEN] = '\0';
-            record.value = value;
-            record.deleted = false;
-            file.write(reinterpret_cast<const char*>(&record), sizeof(Record));
+            file << index << " " << value << "\n";
             file.close();
         }
     }
     
     void remove(const string& index, int value) {
-        // Mark record as deleted instead of rewriting entire file
-        fstream file(dataFile, ios::binary | ios::in | ios::out);
-        if (!file.is_open()) return;
+        string tempFile = "temp_" + dataFile;
+        ifstream inFile(dataFile);
+        ofstream outFile(tempFile);
         
-        Record record;
-        streampos pos;
+        if (!inFile.is_open() || !outFile.is_open()) {
+            if (inFile.is_open()) inFile.close();
+            if (outFile.is_open()) outFile.close();
+            return;
+        }
         
-        while (file.read(reinterpret_cast<char*>(&record), sizeof(Record))) {
-            if (!record.deleted && string(record.index) == index && record.value == value) {
-                pos = file.tellg() - static_cast<streamoff>(sizeof(Record));
-                file.seekp(pos);
-                record.deleted = true;
-                file.write(reinterpret_cast<const char*>(&record), sizeof(Record));
-                break;
+        string line;
+        bool found = false;
+        
+        // Copy all lines except the one to delete
+        while (getline(inFile, line)) {
+            istringstream iss(line);
+            string fileIndex;
+            int fileValue;
+            
+            if (iss >> fileIndex >> fileValue) {
+                if (!(fileIndex == index && fileValue == value)) {
+                    outFile << line << "\n";
+                } else {
+                    found = true;
+                }
+            } else {
+                // Line format is wrong, keep it as is
+                outFile << line << "\n";
             }
         }
-        file.close();
+        
+        inFile.close();
+        outFile.close();
+        
+        // Replace original file with temp file
+        std::remove(dataFile.c_str());
+        std::rename(tempFile.c_str(), dataFile.c_str());
     }
     
     vector<int> find(const string& index) {
-        set<int> valueSet; // Use set to automatically handle duplicates and sort
-        ifstream file(dataFile, ios::binary);
+        vector<int> values;
+        ifstream file(dataFile);
         
         if (!file.is_open()) {
-            return vector<int>();
+            return values;
         }
         
-        Record record;
-        while (file.read(reinterpret_cast<char*>(&record), sizeof(Record))) {
-            if (!record.deleted && string(record.index) == index) {
-                valueSet.insert(record.value);
+        string line;
+        while (getline(file, line)) {
+            istringstream iss(line);
+            string fileIndex;
+            int fileValue;
+            
+            if (iss >> fileIndex >> fileValue) {
+                if (fileIndex == index) {
+                    values.push_back(fileValue);
+                }
             }
         }
         file.close();
         
-        // Convert set to vector
-        vector<int> values(valueSet.begin(), valueSet.end());
+        // Remove duplicates and sort
+        sort(values.begin(), values.end());
+        values.erase(unique(values.begin(), values.end()), values.end());
+        
         return values;
     }
     
 private:
     bool exists(const string& index, int value) {
-        ifstream file(dataFile, ios::binary);
+        ifstream file(dataFile);
         if (!file.is_open()) return false;
         
-        Record record;
-        while (file.read(reinterpret_cast<char*>(&record), sizeof(Record))) {
-            if (!record.deleted && string(record.index) == index && record.value == value) {
-                file.close();
-                return true;
+        string line;
+        while (getline(file, line)) {
+            istringstream iss(line);
+            string fileIndex;
+            int fileValue;
+            
+            if (iss >> fileIndex >> fileValue) {
+                if (fileIndex == index && fileValue == value) {
+                    file.close();
+                    return true;
+                }
             }
         }
         file.close();
