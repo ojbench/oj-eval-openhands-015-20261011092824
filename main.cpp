@@ -4,6 +4,7 @@
 #include <vector>
 #include <algorithm>
 #include <sstream>
+#include <set>
 
 using namespace std;
 
@@ -48,7 +49,6 @@ public:
         }
         
         string line;
-        bool found = false;
         
         // Copy all lines except the one to delete
         while (getline(inFile, line)) {
@@ -59,8 +59,6 @@ public:
             if (iss >> fileIndex >> fileValue) {
                 if (!(fileIndex == index && fileValue == value)) {
                     outFile << line << "\n";
-                } else {
-                    found = true;
                 }
             } else {
                 // Line format is wrong, keep it as is
@@ -77,11 +75,12 @@ public:
     }
     
     vector<int> find(const string& index) {
-        vector<int> values;
+        // Use set to automatically handle duplicates and sorting
+        set<int> valueSet;
         ifstream file(dataFile);
         
         if (!file.is_open()) {
-            return values;
+            return vector<int>();
         }
         
         string line;
@@ -92,17 +91,14 @@ public:
             
             if (iss >> fileIndex >> fileValue) {
                 if (fileIndex == index) {
-                    values.push_back(fileValue);
+                    valueSet.insert(fileValue);
                 }
             }
         }
         file.close();
         
-        // Remove duplicates and sort
-        sort(values.begin(), values.end());
-        values.erase(unique(values.begin(), values.end()), values.end());
-        
-        return values;
+        // Convert set to vector
+        return vector<int>(valueSet.begin(), valueSet.end());
     }
     
 private:
