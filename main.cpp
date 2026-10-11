@@ -4,7 +4,6 @@
 #include <vector>
 #include <algorithm>
 #include <sstream>
-#include <set>
 
 using namespace std;
 
@@ -74,13 +73,13 @@ public:
         std::rename(tempFile.c_str(), dataFile.c_str());
     }
     
-    vector<int> find(const string& index) {
-        // Use set to automatically handle duplicates and sorting
-        set<int> valueSet;
+    void findAndPrint(const string& index) {
+        vector<int> values;
         ifstream file(dataFile);
         
         if (!file.is_open()) {
-            return vector<int>();
+            cout << "null\n";
+            return;
         }
         
         string line;
@@ -91,14 +90,27 @@ public:
             
             if (iss >> fileIndex >> fileValue) {
                 if (fileIndex == index) {
-                    valueSet.insert(fileValue);
+                    values.push_back(fileValue);
                 }
             }
         }
         file.close();
         
-        // Convert set to vector
-        return vector<int>(valueSet.begin(), valueSet.end());
+        if (values.empty()) {
+            cout << "null\n";
+            return;
+        }
+        
+        // Sort and remove duplicates
+        sort(values.begin(), values.end());
+        values.erase(unique(values.begin(), values.end()), values.end());
+        
+        // Print results
+        for (size_t i = 0; i < values.size(); i++) {
+            if (i > 0) cout << " ";
+            cout << values[i];
+        }
+        cout << "\n";
     }
     
 private:
@@ -154,17 +166,7 @@ int main() {
         } else if (command == "find") {
             string index;
             iss >> index;
-            vector<int> values = storage.find(index);
-            
-            if (values.empty()) {
-                cout << "null";
-            } else {
-                for (size_t j = 0; j < values.size(); j++) {
-                    if (j > 0) cout << " ";
-                    cout << values[j];
-                }
-            }
-            cout << "\n";
+            storage.findAndPrint(index);
         }
     }
     
