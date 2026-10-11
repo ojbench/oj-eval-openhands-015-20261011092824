@@ -64,9 +64,10 @@ void remove(const string& index, int value) {
     
     string line;
     while (getline(inFile, line)) {
+        istringstream iss(line);
         string fileIndex;
         int fileValue;
-        istringstream iss(line);
+        
         if (iss >> fileIndex >> fileValue) {
             if (!(fileIndex == index && fileValue == value)) {
                 outFile << line << "\n";
@@ -92,9 +93,10 @@ void findAndPrint(const string& index) {
     
     string line;
     while (getline(file, line)) {
+        istringstream iss(line);
         string fileIndex;
         int fileValue;
-        istringstream iss(line);
+        
         if (iss >> fileIndex >> fileValue) {
             if (fileIndex == index) {
                 values.push_back(fileValue);
